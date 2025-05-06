@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +13,14 @@ import HomePage from "./pages/HomePage";
 import AboutPage from "./pages/AboutPage";
 import PricingPage from "./pages/PricingPage";
 import ContactPage from "./pages/ContactPage";
+
+// Solution pages
+import SalesPage from "./pages/SolutionPages/SalesPage";
+import EmailPage from "./pages/SolutionPages/EmailPage";
+import CustomerSupportPage from "./pages/SolutionPages/CustomerSupportPage";
+import MeetingsPage from "./pages/SolutionPages/MeetingsPage";
+import MedicalScribePage from "./pages/SolutionPages/MedicalScribePage";
+import AllToolsPage from "./pages/SolutionPages/AllToolsPage";
 
 // Footer pages
 import TermsPage from "./pages/FooterPages/TermsPage";
@@ -46,6 +55,14 @@ const App = () => (
             <Route path="/about" element={<AboutPage />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            
+            {/* Solution pages */}
+            <Route path="/solutions/sales" element={<SalesPage />} />
+            <Route path="/solutions/email" element={<EmailPage />} />
+            <Route path="/solutions/customer-support" element={<CustomerSupportPage />} />
+            <Route path="/solutions/meetings" element={<MeetingsPage />} />
+            <Route path="/solutions/medical-scribe" element={<MedicalScribePage />} />
+            <Route path="/solutions/all-tools" element={<AllToolsPage />} />
             
             {/* Footer pages */}
             <Route path="/terms" element={<TermsPage />} />

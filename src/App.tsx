@@ -19,6 +19,14 @@ import PrivacyPage from "./pages/FooterPages/PrivacyPage";
 import FaqPage from "./pages/FooterPages/FaqPage";
 import CareersPage from "./pages/FooterPages/CareersPage";
 import BlogPage from "./pages/FooterPages/BlogPage";
+import TrustCenterPage from "./pages/FooterPages/TrustCenterPage";
+import SecurityPage from "./pages/FooterPages/SecurityPage";
+import AcademyPage from "./pages/FooterPages/AcademyPage";
+import CommunityPage from "./pages/FooterPages/CommunityPage";
+import HelpCenterPage from "./pages/FooterPages/HelpCenterPage";
+import IntegrationsPage from "./pages/FooterPages/IntegrationsPage";
+import PartnersPage from "./pages/FooterPages/PartnersPage";
+import ChangelogPage from "./pages/FooterPages/ChangelogPage";
 
 // Other
 import NotFound from "./pages/NotFound";
@@ -45,6 +53,14 @@ const App = () => (
             <Route path="/faq" element={<FaqPage />} />
             <Route path="/careers" element={<CareersPage />} />
             <Route path="/blog" element={<BlogPage />} />
+            <Route path="/trust-center" element={<TrustCenterPage />} />
+            <Route path="/security" element={<SecurityPage />} />
+            <Route path="/academy" element={<AcademyPage />} />
+            <Route path="/community" element={<CommunityPage />} />
+            <Route path="/help-center" element={<HelpCenterPage />} />
+            <Route path="/integrations" element={<IntegrationsPage />} />
+            <Route path="/partners" element={<PartnersPage />} />
+            <Route path="/changelog" element={<ChangelogPage />} />
             
             {/* 404 page */}
             <Route path="*" element={<NotFound />} />

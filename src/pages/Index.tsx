@@ -1,10 +1,9 @@
 
 import { Navigate } from "react-router-dom";
-import HomePage from "./HomePage";
 
 const Index = () => {
-  // Return the HomePage component directly instead of the placeholder
-  return <HomePage />;
+  // Redirect to home route to ensure it goes through the MainLayout
+  return <Navigate to="/" replace />;
 };
 
 export default Index;

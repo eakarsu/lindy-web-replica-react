@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: lindy_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d lindy_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lindy_ci
+      TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lindy_ci
+      PUBLIC_ORGANIZATION_SLUG: demo-sales
+      ALLOWED_ORIGINS: http://localhost:8080,http://localhost:3001,http://127.0.0.1:3001
+      ADMIN_EMAIL: admin@example.test
+      ADMIN_ORGANIZATION_NAME: Demo Sales
+      ADMIN_ROLE: ADMIN
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Generate ephemeral test credentials
+        run: |
+          echo "AUTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PRIVACY_HASH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          test_password=$(openssl rand -hex 24)
+          echo "ADMIN_PASSWORD=$test_password" >> "$GITHUB_ENV"
+          echo "TEST_ADMIN_PASSWORD=$test_password" >> "$GITHUB_ENV"
+          echo "E2E_ADMIN_PASSWORD=$test_password" >> "$GITHUB_ENV"
+      - run: npm ci
+      - run: npm run db:migrate
+      - run: npm run db:migrate
+      - run: npm run admin:create
+      - run: npm run db:verify
+      - run: npm test
+      - run: npm run test:integration
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=low
+      - run: npm audit --audit-level=low
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          E2E_ADMIN_EMAIL: admin@example.test
+      - name: Backup and restore smoke test
+        run: |
+          psql postgresql://postgres:postgres@127.0.0.1:5432/postgres -v ON_ERROR_STOP=1 -c 'CREATE DATABASE lindy_restore'
+          scripts/backup.sh backups/ci.dump
+          RESTORE_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/lindy_restore scripts/restore-verify.sh backups/ci.dump
+      - run: docker build -t lindy-demo-request-workflow:test .
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2

@@ -1,73 +1,73 @@
-# Welcome to your Lovable project
+# Governed demo-request workflow
 
-## Project info
+This repository now implements one complete product journey: a visitor submits a demo request, receives a durable reference, and an authorized sales reviewer moves it through an explicit PostgreSQL-backed lifecycle. The previous broad AI marketing replica was narrowed because static pages and dead buttons were not evidence of a working product.
 
-**URL**: https://lovable.dev/projects/91e64b6a-af8a-4109-a0a3-bbd2c565f09e
+## Acceptance criteria
 
-## How can I edit this code?
+- A consented public submission is validated and persisted exactly once under browser/network retry.
+- The browser receives a non-sensitive reference and clear failure state; form data is never logged.
+- Reviewers authenticate without default credentials. ADMIN and REP can perform valid transitions; AUDITOR is read-only.
+- Every read/write is scoped to the server-configured organization. The public client cannot choose a tenant.
+- State updates require an expected version and idempotency key. Invalid jumps, stale writes, CSRF, origins, and cross-tenant IDs fail closed.
+- Creation and status changes produce immutable, per-organization hash-linked audit events.
+- Readiness proves the database, exact migration checksums, and public organization are present.
 
-There are several ways of editing your application.
+The lifecycle is `NEW -> QUALIFIED -> CONTACTED -> CLOSED`, with rejection from `NEW` or `QUALIFIED` and re-qualification from `CONTACTED`.
 
-**Use Lovable**
+## Local setup
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/91e64b6a-af8a-4109-a0a3-bbd2c565f09e) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Requires Node.js 22 or later and PostgreSQL 14 or later.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+npm ci
+cp .env.example .env
+# Replace both secret placeholders and adjust DATABASE_URL.
+set -a; source .env; set +a
+npm run db:migrate
+npm run admin:create
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+`admin:create` reads the temporary `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_ORGANIZATION_NAME`, and `ADMIN_ROLE` variables. It refuses to overwrite an existing account. Remove the bootstrap password from the environment after use.
 
-# Step 3: Install the necessary dependencies.
-npm i
+Run the API on port 3001 and Vite on port 8080 in separate terminals:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```sh
+npm run dev:api
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Vite proxies `/api` locally. A production build is served by the same Express process:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+npm run build
+NODE_ENV=production COOKIE_SECURE=true npm start
+```
 
-**Use GitHub Codespaces**
+Production must sit behind a known TLS proxy and use an exact HTTPS `ALLOWED_ORIGINS` value. See [operations](docs/OPERATIONS.md) and the [security model](docs/SECURITY.md).
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Quality and database checks
 
-## What technologies are used for this project?
+```sh
+npm run lint
+npm run typecheck
+npm test
+TEST_DATABASE_URL=postgresql:///lindy_test npm run test:integration
+npm run test:e2e
+npm run build
+npm audit --omit=dev --audit-level=high
+npm run db:verify
+```
 
-This project is built with:
+Integration and browser tests expect a disposable database; the integration suite applies checked-in migrations and seeds synthetic users. CI also repeats migrations, exercises Chromium end to end, scans full Git history for secrets, creates and restores a real database backup, and builds the non-root container.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Runtime endpoints
 
-## How can I deploy this project?
+- `GET /api/health/live` — process liveness only
+- `GET /api/health/ready` — database, migrations, and workflow-organization readiness
+- `POST /api/public/demo-requests` — strict public intake; requires `Idempotency-Key`
+- `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout`
+- `GET /api/admin/demo-requests` — authenticated tenant queue
+- `POST /api/admin/demo-requests/:id/transitions` — ADMIN/REP, CSRF token, expected version, and idempotency key required
+- `GET /api/admin/audit/verify` — ADMIN/AUDITOR chain verification
 
-Simply open [Lovable](https://lovable.dev/projects/91e64b6a-af8a-4109-a0a3-bbd2c565f09e) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+There are no sample production credentials, fake integrations, analytics beacons, external AI calls, or automatic email claims. Deployment-owned legal approval, retention/deletion policy, MFA/SSO, managed encryption, immutable external audit storage where required, observability ownership, accessibility, load, penetration, and disaster-recovery exercises remain launch gates.

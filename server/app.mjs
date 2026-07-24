@@ -8,6 +8,7 @@ import { authHandlers } from "./auth.mjs";
 import { verifyAuditChain } from "./audit.mjs";
 import { HttpError } from "./errors.mjs";
 import { verifyMigrations } from "./migrations.mjs";
+import { requestDemoOperationsReadiness } from "./openrouter-evidence.mjs";
 import { createDemoRequest, listDemoRequests, transitionDemoRequest } from "./workflow.mjs";
 
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -120,6 +121,24 @@ export function createApp({ pool, config, serveFrontend = true, logger = console
   app.post("/api/auth/login", asyncRoute(auth.login));
   app.get("/api/auth/me", auth.requireAuth, auth.me);
   app.post("/api/auth/logout", auth.requireAuth, auth.requireCsrf, auth.logout);
+  app.post(
+    "/api/runtime-ai/operations-readiness",
+    auth.requireAuth,
+    auth.requireCsrf,
+    asyncRoute(async (req, res) => {
+      const workflowSummary = typeof req.body?.workflowSummary === "string" ? req.body.workflowSummary.trim() : "";
+      if (workflowSummary.length < 10 || workflowSummary.length > 1000) throw new HttpError(400, "VALIDATION_FAILED", "workflowSummary must contain 10-1000 characters");
+      const evidence = await requestDemoOperationsReadiness(workflowSummary);
+      const analysisId = randomUUID();
+      await pool.query(
+        `INSERT INTO runtime_ai_results
+          (id, organization_id, user_id, feature, input, provider_request_id, provider_model, result_text, provider_receipt)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [analysisId, req.principal.organizationId, req.principal.userId, "operations-readiness", { workflowSummary }, evidence.providerReceipt.requestId, evidence.providerReceipt.model, evidence.result, evidence.providerReceipt],
+      );
+      res.json({ analysisId, ...evidence });
+    }),
+  );
 
   app.get(
     "/api/admin/demo-requests",

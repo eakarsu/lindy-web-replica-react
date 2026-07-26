@@ -34,6 +34,10 @@ export PORT="$BACKEND_PORT"
 export MIGRATE_ON_START=false
 export ALLOWED_ORIGINS="${ALLOWED_ORIGINS:-http://${HOST}:${FRONTEND_PORT}}"
 export VITE_API_PROXY_TARGET="http://127.0.0.1:$BACKEND_PORT"
+if [[ "${NODE_ENV:-development}" != production && "${ENABLE_DEMO_CREDENTIAL_AUTOFILL:-true}" == true ]]; then
+  npm run db:migrate
+  npm run admin:create
+fi
 
 backend_pid=''
 frontend_pid=''

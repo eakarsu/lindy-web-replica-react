@@ -88,6 +88,10 @@ export async function login(email: string, password: string) {
   });
 }
 
+export async function loadDemoCredentials() {
+  return apiFetch<{ email: string; password: string }>("/api/auth/demo-credentials");
+}
+
 export async function loadSession() {
   return apiFetch<{ user: User; csrfToken: string }>("/api/auth/me");
 }

@@ -6,6 +6,7 @@ import {
   DemoRequest,
   User,
   listRequests,
+  loadDemoCredentials,
   loadSession,
   login,
   logout,
@@ -71,6 +72,20 @@ const AdminRequestsPage = () => {
     }
   };
 
+  const fillDemoCredentials = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const credentials = await loadDemoCredentials();
+      setEmail(credentials.email);
+      setPassword(credentials.password);
+    } catch (credentialError) {
+      setError(credentialError instanceof Error ? credentialError.message : "Demo credentials are unavailable");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await logout(csrfToken);
@@ -115,7 +130,8 @@ const AdminRequestsPage = () => {
               <label htmlFor="review-password" className="mb-1 block text-sm font-medium">Password</label>
               <Input id="review-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required />
             </div>
-            <Button className="btn-primary w-full" type="submit" disabled={loading}>{loading ? "Signing in…" : "Sign in"}</Button>
+            <Button className="w-full" type="button" variant="outline" disabled={loading} onClick={fillDemoCredentials}>Auto Fill Demo Credentials</Button>
+            <Button className="btn-primary w-full" type="submit" disabled={loading}>{loading ? "Signing in…" : "Sign In"}</Button>
           </form>
         </div>
       </main>
@@ -126,7 +142,7 @@ const AdminRequestsPage = () => {
     <main className="container-custom py-12">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="heading-2">Demo requests</h1>
+          <h1 className="heading-2">Authenticated Request Dashboard</h1>
           <p className="text-lindy-gray">Signed in as {user.email} ({user.role})</p>
         </div>
         <div className="flex gap-2">

@@ -1,11 +1,14 @@
 
 import { Outlet } from "react-router-dom";
 import Navbar from "@/components/navigation/Navbar";
+import SidebarNav from "@/components/navigation/SidebarNav";
 import Footer from "@/components/navigation/Footer";
 
 const MainLayout = () => {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen codex-nav-shell">
+      <SidebarNav />
+      <div className="codex-protected-main flex flex-col min-h-screen">
       <Navbar />
       <div className="bg-lindy-secondary px-4 py-2 text-center text-sm text-white">
         Verified scope: demo-request intake and sales review. Broader AI product claims are not part of this build.
@@ -14,6 +17,7 @@ const MainLayout = () => {
         <Outlet />
       </main>
       <Footer />
+      </div>
     </div>
   );
 };

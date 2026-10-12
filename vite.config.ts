@@ -8,7 +8,7 @@ export default defineConfig({
     host: "::",
     port: 8080,
     proxy: {
-      "/api": process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001",
+      "/api": {target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3001", configure(proxy) { proxy.on('proxyReq', (upstream, req, res) => { req.once('aborted', () => upstream.destroy()); res.once('close', () => { if (!('writableEnded' in res) || !res.writableEnded) upstream.destroy(); }); }); },},
     },
   },
   plugins: [react()],

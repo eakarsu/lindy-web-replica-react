@@ -10,7 +10,7 @@ export function openRouterConfig(environment = process.env) {
   return { apiKey, model, baseUrl };
 }
 
-export async function requestDemoOperationsReadiness(workflowSummary, request = fetch) {
+export async function requestDemoOperationsReadiness(workflowSummary, request = fetch, signal) {
   const config = openRouterConfig();
   const response = await request(`${config.baseUrl}/chat/completions`, {
     method: "POST",
@@ -29,7 +29,7 @@ export async function requestDemoOperationsReadiness(workflowSummary, request = 
         { role: "user", content: workflowSummary },
       ],
     }),
-    signal: AbortSignal.timeout(120000),
+    signal: signal ? AbortSignal.any([signal,AbortSignal.timeout(120000)]) : AbortSignal.timeout(120000),
   });
   if (!response.ok) throw new Error(`OpenRouter request failed with status ${response.status}`);
   const data = await response.json();

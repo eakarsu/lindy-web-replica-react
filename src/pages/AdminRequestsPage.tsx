@@ -1,3 +1,4 @@
+import NativeAIPage from '@/components/native-ai/NativeAIPage';
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,15 +73,18 @@ const AdminRequestsPage = () => {
     }
   };
 
-  const fillDemoCredentials = async () => {
+  const handleDemoLogin = async () => {
     setError(null);
     setLoading(true);
     try {
       const credentials = await loadDemoCredentials();
-      setEmail(credentials.email);
-      setPassword(credentials.password);
+      const session = await login(credentials.email, credentials.password);
+      setUser(session.user);
+      setCsrfToken(session.csrfToken);
+      setPassword("");
+      await refresh();
     } catch (credentialError) {
-      setError(credentialError instanceof Error ? credentialError.message : "Demo credentials are unavailable");
+      setError(credentialError instanceof Error ? credentialError.message : "Demo login is unavailable");
     } finally {
       setLoading(false);
     }
@@ -130,7 +134,7 @@ const AdminRequestsPage = () => {
               <label htmlFor="review-password" className="mb-1 block text-sm font-medium">Password</label>
               <Input id="review-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required />
             </div>
-            <Button className="w-full" type="button" variant="outline" disabled={loading} onClick={fillDemoCredentials}>Auto Fill Demo Credentials</Button>
+            <Button className="w-full" type="button" variant="outline" disabled={loading} onClick={handleDemoLogin}>Log In as Demo</Button>
             <Button className="btn-primary w-full" type="submit" disabled={loading}>{loading ? "Signing in…" : "Sign In"}</Button>
           </form>
         </div>
@@ -140,6 +144,7 @@ const AdminRequestsPage = () => {
 
   return (
     <main className="container-custom py-12">
+      <a href="#ai-workspace" className="underline">AI workspace</a>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="heading-2">Authenticated Request Dashboard</h1>
@@ -181,6 +186,7 @@ const AdminRequestsPage = () => {
           ))}
         </div>
       )}
+      <section id="ai-workspace"><NativeAIPage csrfToken={csrfToken}/></section>
     </main>
   );
 };

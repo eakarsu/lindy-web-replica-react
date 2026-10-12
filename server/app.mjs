@@ -1,3 +1,4 @@
+import {claim} from './native-quota.mjs';
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -136,17 +137,30 @@ export function createApp({ pool, config, serveFrontend = true, logger = console
     asyncRoute(async (req, res) => {
       const workflowSummary = typeof req.body?.workflowSummary === "string" ? req.body.workflowSummary.trim() : "";
       if (workflowSummary.length < 10 || workflowSummary.length > 1000) throw new HttpError(400, "VALIDATION_FAILED", "workflowSummary must contain 10-1000 characters");
-      const evidence = await requestDemoOperationsReadiness(workflowSummary);
-      const analysisId = randomUUID();
-      await pool.query(
+      try{claim(req.principal.organizationId+':'+req.principal.userId);}catch(error){throw new HttpError(error.status||503,'AI_RATE_LIMIT',error.message); }
+      const controller=new AbortController();const cancelled=()=>controller.abort();const closed=()=>{if(!res.writableEnded)cancelled();};req.once('aborted',cancelled);res.once('close',closed);
+      let client;
+      try{
+        const evidence=await requestDemoOperationsReadiness(workflowSummary,fetch,controller.signal);
+        if(controller.signal.aborted||res.destroyed)return;
+        const analysisId=randomUUID();client=await pool.connect();await client.query('BEGIN');
+      await client.query(
         `INSERT INTO runtime_ai_results
           (id, organization_id, user_id, feature, input, provider_request_id, provider_model, result_text, provider_receipt)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
         [analysisId, req.principal.organizationId, req.principal.userId, "operations-readiness", { workflowSummary }, evidence.providerReceipt.requestId, evidence.providerReceipt.model, evidence.result, evidence.providerReceipt],
       );
-      res.json({ analysisId, ...evidence });
+
+        if(controller.signal.aborted||res.destroyed){await client.query('ROLLBACK');return;}
+        await client.query('COMMIT');if(!res.destroyed)res.json({analysisId,...evidence});
+      }catch(error){if(client)await client.query('ROLLBACK');if(controller.signal.aborted||res.destroyed)return;throw new HttpError(502,'PROVIDER_UNAVAILABLE','AI provider request failed');}
+      finally{client?.release();req.removeListener('aborted',cancelled);res.removeListener('close',closed);}
     }),
   );
+
+  app.get('/api/runtime-ai/operations-readiness',auth.requireAuth,asyncRoute(async(req,res)=>{
+    const result=await pool.query("SELECT id,input,result_text,provider_model,created_at FROM runtime_ai_results WHERE organization_id=$1 AND user_id=$2 AND feature='operations-readiness' ORDER BY created_at DESC LIMIT 50",[req.principal.organizationId,req.principal.userId]);res.json({reports:result.rows.map(row=>({id:row.id,prompt:row.input.workflowSummary,content:row.result_text,model:row.provider_model,createdAt:row.created_at}))});
+  }));
 
   app.get(
     "/api/admin/demo-requests",
